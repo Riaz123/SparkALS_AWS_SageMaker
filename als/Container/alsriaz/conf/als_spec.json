@@ -1,0 +1,10 @@
+{
+	"ranking_type":"count"
+	,"max_itter": 5
+	,"retention_date":"20180205"
+	,"retention_days": 10
+	,"reg_param" : 0.01
+	,"als_rank" : 10
+	,"reco_item" : 3
+	,"group_size":4099
+}

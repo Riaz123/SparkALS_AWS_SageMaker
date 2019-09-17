@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+
+
+# This implementation works in File mode and makes no assumptions about the input file names.
+# Input is specified as CSV with a data point in each row and the labels in the first column.
+
+from __future__ import print_function
+
+import os
+import json
+import uuid
+import pickle
+import sys
+import traceback
+import cloudpickle
+import pandas as pd
+
+from sklearn import tree
+import json
+import datetime as dt
+import numpy as np
+import heapq # check other alternative to improve performance
+from pyspark.sql import SQLContext,SparkSession
+from pyspark.sql.functions import lit,split,sum as sum,count as count,max as max_,datediff,to_date
+from pyspark.sql.window import Window
+from pyspark.sql import Row
+import pyspark.sql.functions as sf
+from pyspark.ml.recommendation import ALS
+from pyspark.ml.param import * 
+from pyspark.sql.types import DoubleType
+from pyspark.ml.linalg import Vectors
+
+# These are the paths to where SageMaker mounts interesting things in your container.
+
+prefix = '/opt/ml/'
+
+input_path = prefix + 'input/data'
+output_path = os.path.join(prefix, 'output')
+model_path = os.path.join(prefix, 'model')
+param_path = os.path.join(prefix, 'input/config/hyperparameters.json')
+uuid=uuid.uuid4()
+from pyspark.context import SparkContext
+spark = SparkSession.builder.appName("alsriaz").getOrCreate()
+sc = spark.sparkContext
+sqlContext = SQLContext(sc)
+# This algorithm has a single channel of input data called 'training'. Since we run in
+# File mode, the input files are copied to the directory specified here.
+channel_name = 'training'
+training_path = os.path.join(input_path, channel_name)
+
+
+def ratingFromIncident(data):
+    return data.select(data["user_id"], data["item_id"]) \
+        .withColumn("rating", lit(1.0))
+
+
+def ratingFromPurchaseCount(data):
+    ratingsDf = ratingFromIncident(data)
+    return ratingsDf.groupBy(ratingsDf["user_id"], ratingsDf["item_id"]) \
+        .agg(sum(ratingsDf["rating"]).alias("rating"))
+
+
+def ratingFromTotalQty(data):
+    return data.groupBy(['user_id', 'item_id']) \
+        .agg(sf.sum('qty').alias('rating'))
+
+
+def ratingFromNormalizeQty(data):
+    ratingsDf1 = ratingFromPurchaseCount(data)
+    windowSpec = Window.partitionBy("item_id")
+    windowSpec = Window.partitionBy(ratingsDf1["item_id"])
+    return ratingsDf1.withColumn("rating", ratingsDf1["rating"] / count(ratingsDf1["item_id"]).over(windowSpec))
+
+
+def rankGenFunc(strMethod):
+    dicMethod = {"incident": ratingFromIncident,
+                 "count": ratingFromPurchaseCount,
+                 "total_qty": ratingFromTotalQty,
+                 "normalize_count": ratingFromNormalizeQty,
+                 }
+    return dicMethod[strMethod]
+
+# This algorithm has a single channel of input data called 'training'. Since we run in
+# File mode, the input files are copied to the directory specified here.
+channel_name='training'
+training_path = os.path.join(input_path, channel_name)
+
+# The function to execute the training.
+def train():
+    print('Starting the training.')
+    with open(param_path, 'r') as tc:
+        trainingParams = json.load(tc)
+    try:
+        print("inside the try block")
+        spec_file = 'conf/als_spec.json';
+        print(spec_file)
+        with open(spec_file) as spec_data:
+            spec = json.load(spec_data)
+        df_transac = spark.createDataFrame(sc.textFile('data/Online Retail.csv') \
+                                           .map(lambda x: x.split("|")[:4]) \
+                                           .map(
+            lambda r: Row(user_code=r[0], item_code=r[1], qty=float(r[2]), date=r[3]) \
+            )
+                                           )
+        users = df_transac.select('user_code') \
+            .distinct().rdd.map(lambda x: x[0]) \
+            .zipWithIndex().toDF(['user_code', 'user_id'])
+        items = df_transac.select('item_code') \
+            .distinct().rdd.map(lambda x: x[0]) \
+            .zipWithIndex().toDF(['item_code', 'item_id'])
+        temp_joined_data = df_transac.join(users, 'user_code').join(items, 'item_code')
+        joined_data = temp_joined_data.select(temp_joined_data["user_id"] \
+                                              , temp_joined_data["item_id"] \
+                                              , temp_joined_data["qty"])
+
+        def getScore(xy):  # user_group = xy[0][0] # do we need user group?
+            uids = list(map(lambda x: x[0], xy[0][1]))
+            mu = np.matrix(list(map(lambda x: x[1], xy[0][1])))
+            iids = list(map(lambda x: x[0], xy[1][1]))
+            mv = np.matrix(list(map(lambda x: x[1], xy[1][1])))
+            mm = mu.dot(mv.T)
+            iids_score = [(iids, x) for x in mm.tolist()]
+            return list(zip(uids, list(map(getTopK, iids_score))))
+
+        def mergeReco(reco1, reco2):
+            ids = reco1[0] + reco2[0]
+            vals = reco1[1] + reco2[1]
+            ind = heapq.nlargest(spec['reco_item'], range(len(vals)), vals.__getitem__)
+            return ([ids[i] for i in ind], [vals[i] for i in ind])
+
+        def getTopK(ids_vals):
+            ids, vals = ids_vals
+            ind = heapq.nlargest(spec['reco_item'], range(len(vals)), vals.__getitem__)
+            return ([ids[i] for i in ind], [vals[i] for i in ind])
+
+        rating_data = rankGenFunc(spec["ranking_type"])(joined_data)
+        type(rating_data)
+        als_spec = ALS().setMaxIter(spec['max_itter']).setRegParam(spec['reg_param']) \
+            .setUserCol('user_id') \
+            .setItemCol('item_id') \
+            .setRank(spec['als_rank']) \
+            .setRatingCol('rating')
+        type(als_spec)
+        print("****************************type(als_spec)*************** ",type(als_spec))
+        als_model = als_spec.fit(rating_data)
+        type(als_model)
+        print("****************************type(als_model)*************** ",type(als_model))
+        with open(os.path.join(model_path, 'als-als-model.pkl'), 'wb') as out:
+            pickle.dump(als_model, out)
+        print('Training complete.')
+    except Exception as e:
+        # Write out an error file. This will be returned as the failureReason in the
+        # DescribeTrainingJob result.
+        trc = traceback.format_exc()
+        with open(os.path.join(output_path, 'failure'), 'w') as s:
+            s.write('Exception during training: ' + str(e) + '\n' + trc)
+        # Printing this causes the exception to be in the training job logs, as well.
+        print('Exception during training: ' + str(e) + '\n' + trc, file=sys.stderr)
+        # A non-zero exit code causes the training job to be marked as Failed.
+        sys.exit(255)
+
+if __name__ == '__main__':
+    train()
+
+    # A zero exit code causes the job to be marked a Succeeded.
+    sys.exit(0)
