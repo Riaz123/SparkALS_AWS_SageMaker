@@ -2,18 +2,18 @@
 ALS based recommendation Engine Build on Apache spark &amp; served on AWS Sagemaker
 Collaborative Filter Recommendation Engine built on Apache Spark:
 1) Tools & libraries used:
-              Python 3.6
-              Python Flask for serverless architecture & scaling on AWS
+             Python 3.6
+             Python Flask for serverless architecture & scaling on AWS
              HADOOP_VERSION 2.7
-              Apache Spark 2.3.0
-              Python Boto3
+             Apache Spark 2.3.0
+             Python Boto3
              Scikit-learn
-              Jupyter Notebook (In production integrated into Sagemaker)
+             Jupyter Notebook (In production integrated into Sagemaker)
              AWS EC2
              AWS Sagemaker
-            AWS S3
-           AWS ECS : AmazonEC2ContainerRegistry
-            Docker
+             AWS S3
+             AWS ECS : AmazonEC2ContainerRegistry
+             Docker
 
 2) Problem to solve: 
 Building recommendation engine with retail explicit feedback data (consisting only of customer ID, prod ID, qty purchased and date of purchase).
@@ -47,6 +47,7 @@ Let's say,
 
 3) Architecture discussion:
 ALS application which is built using Apache Spark is containerized using Docker (Docker image) & AWS Sagemaker is used for training & Serving the algorithm.
+
 S3 is the storage which holds data.
 Hyper parameter values are in als_spec.json
 Jupyter notebook is part of AWS Sagemker where the code is written.
@@ -127,7 +128,7 @@ This code looks for an ECR repository in the account you're using and the curren
 
 %%sh
 
-# The name of our algorithm
+## The name of our algorithm
 algorithm_name=decision-trees-sample
 
 cd container
@@ -137,13 +138,13 @@ chmod +x alsriaz /serve
 
 account=$(aws sts get-caller-identity --query Account --output text)
 
-# Get the region defined in the current configuration (default to us-west-2 if none defined)
+## Get the region defined in the current configuration (default to us-west-2 if none defined)
 region=$(aws configure get region)
 region=${region:-us-west-2}
 
 fullname="${account}.dkr.ecr.${region}.amazonaws.com/${algorithm_name}:latest"
 
-# If the repository doesn't exist in ECR, create it.
+## If the repository doesn't exist in ECR, create it.
 
 aws ecr describe-repositories --repository-names "${algorithm_name}" > /dev/null 2>&1
 
@@ -152,14 +153,14 @@ then
     aws ecr create-repository --repository-name "${algorithm_name}" > /dev/null
 fi
 
-# Get the login command from ECR and execute it directly
+## Get the login command from ECR and execute it directly
 $(aws ecr get-login --region ${region} --no-include-email)
 
-# Build the docker image locally with the image name and then push it to ECR
-# with the full name.
+## Build the docker image locally with the image name and then push it to ECR
+## with the full name.
 
-# On a SageMaker Notebook Instance, the docker daemon may need to be restarted in order
-# to detect your network configuration correctly.  (This is a known issue.)
+## On a SageMaker Notebook Instance, the docker daemon may need to be restarted in order
+## to detect your network configuration correctly.  (This is a known issue.)
 if [ -d "/home/ec2-user/SageMaker" ]; then
   sudo service docker restart
 fi
