@@ -77,24 +77,24 @@ Input : /opt/ml/input/config contains information to control how your program ru
 	,"reco_item" : 3
 	,"group_size":4099
 }
-•	/opt/ml/input/data/Online Retail.csv/ (for File mode) contains the input data for that channel. The channels are created based on the call to CreateTrainingJob (is part of Sagemaker training) but it's generally important that channels match what the algorithm expects. The files for each channel will be copied from S3 to this directory, preserving the tree structure indicated by the S3 key structure. 
+> /opt/ml/input/data/Online Retail.csv/ (for File mode) contains the input data for that channel. The channels are created based on the call to CreateTrainingJob (is part of Sagemaker training) but it's generally important that channels match what the algorithm expects. The files for each channel will be copied from S3 to this directory, preserving the tree structure indicated by the S3 key structure. 
 The output
-•	/opt/ml/model/ is the directory where you write the model that your algorithm generates. It can be a single file or a whole directory tree. SageMaker will package any files in this directory into a compressed tar archive file. This file will be available at the S3 location returned in the DescribeTrainingJob result.
-•	/opt/ml/output is a directory where the algorithm can write a file failure that describes why the job failed. The contents of this file will be returned in the FailureReason field of the DescribeTrainingJob result. 
+> /opt/ml/model/ is the directory where you write the model that your algorithm generates. It can be a single file or a whole directory tree. SageMaker will package any files in this directory into a compressed tar archive file. This file will be available at the S3 location returned in the DescribeTrainingJob result.
+> /opt/ml/output is a directory where the algorithm can write a file failure that describes why the job failed. The contents of this file will be returned in the FailureReason field of the DescribeTrainingJob result. 
 
 Running your container during hosting
 Hosting has a very different model that training because hosting is responding to inference requests that come in via HTTP. In this example, we use our recommended Python serving stack to provide robust and scalable serving of inference requests:
 This stack is implemented in the sample code here and you can mostly just leave it alone. 
 Amazon SageMaker uses two URLs in the container:
-•	/ping will receive GET requests from the infrastructure. Your program returns 200 if the container is up and accepting requests.
-•	/invocations is the endpoint that receives client inference POST requests. The format of the request and the response is up to the algorithm. If the client supplied ContentType and Accept headers, these will be passed in as well. 
-•	The container will have the model files in the same place they were written during training:
+> /ping will receive GET requests from the infrastructure. Your program returns 200 if the container is up and accepting requests.
+> /invocations is the endpoint that receives client inference POST requests. The format of the request and the response is up to the algorithm. If the client supplied ContentType and Accept headers, these will be passed in as well. 
+> The container will have the model files in the same place they were written during training:
 /opt/ml
 └── model
    └── <model files>
 
-•	The parts of the sample container
-•	In the container directory are all the components you need to package the sample algorithm for Amazon SageMager:
+> The parts of the sample container
+> In the container directory are all the components you need to package the sample algorithm for Amazon SageMager:
 
 ├── Dockerfile
 ├── build_and_push.sh
@@ -106,15 +106,15 @@ Amazon SageMaker uses two URLs in the container:
 └── wsgi.py
 
 
-•	Dockerfile describes how to build your Docker container image. More details below.
-•	build_and_push.sh is a script that users the Dockerfile to build your container images and then pushes it to ECR. We'll invoke the commands directly later in this notebook, but you can just copy and run the script for your own algorithms.
-•	alsriaz is the directory which contains the files that will be installed in the container.
+> Dockerfile describes how to build your Docker container image. More details below.
+> build_and_push.sh is a script that users the Dockerfile to build your container images and then pushes it to ECR. We'll invoke the commands directly later in this notebook, but you can just copy and run the script for your own algorithms.
+> alsriaz is the directory which contains the files that will be installed in the container.
 The files that we'll put in the container are:
-•	nginx.conf is the configuration file for the nginx front-end. Generally, you should be able to take this file as-is.
-•	predictor.py is the program that actually implements the Flask web server and the decision tree predictions for this app. You'll want to customize the actual prediction parts to your application. Since this algorithm is simple, we do all the processing here in this file, but you may choose to have separate files for implementing your custom logic.
-•	serve is the program started when the container is started for hosting. It simply launches the gunicorn server which runs multiple instances of the Flask app defined in predictor.py. You should be able to take this file as-is.
-•	train is the program that is invoked when the container is run for training. You will modify this program to implement your training algorithm.
-•	wsgi.py is a small wrapper used to invoke the Flask app. You should be able to take this file as-is.
+> nginx.conf is the configuration file for the nginx front-end. Generally, you should be able to take this file as-is.
+> predictor.py is the program that actually implements the Flask web server and the decision tree predictions for this app. You'll want to customize the actual prediction parts to your application. Since this algorithm is simple, we do all the processing here in this file, but you may choose to have separate files for implementing your custom logic.
+> serve is the program started when the container is started for hosting. It simply launches the gunicorn server which runs multiple instances of the Flask app defined in predictor.py. You should be able to take this file as-is.
+> train is the program that is invoked when the container is run for training. You will modify this program to implement your training algorithm.
+> wsgi.py is a small wrapper used to invoke the Flask app. You should be able to take this file as-is.
 The Dockerfile
 The Dockerfile describes the image that we want to build. You can think of it as describing the complete operating system installation of the system that you want to run. A Docker container running is quite a bit lighter than a full operating system, however, because it takes advantage of Linux on the host machine for the basic operations. 
 For the Python science stack, we will start from a standard Ubuntu installation and run the normal tools to install the things needed by scikit-learn. Finally, we add the code that implements our specific algorithm to the container and set up the right environment to run under.
@@ -128,7 +128,7 @@ This code looks for an ECR repository in the account you're using and the curren
 
 %%sh
 
-## The name of our algorithm
+The name of our algorithm
 algorithm_name=decision-trees-sample
 
 cd container
@@ -138,13 +138,13 @@ chmod +x alsriaz /serve
 
 account=$(aws sts get-caller-identity --query Account --output text)
 
-## Get the region defined in the current configuration (default to us-west-2 if none defined)
+Get the region defined in the current configuration (default to us-west-2 if none defined)
 region=$(aws configure get region)
 region=${region:-us-west-2}
 
 fullname="${account}.dkr.ecr.${region}.amazonaws.com/${algorithm_name}:latest"
 
-## If the repository doesn't exist in ECR, create it.
+If the repository doesn't exist in ECR, create it.
 
 aws ecr describe-repositories --repository-names "${algorithm_name}" > /dev/null 2>&1
 
@@ -153,14 +153,13 @@ then
     aws ecr create-repository --repository-name "${algorithm_name}" > /dev/null
 fi
 
-## Get the login command from ECR and execute it directly
+Get the login command from ECR and execute it directly
 $(aws ecr get-login --region ${region} --no-include-email)
 
-## Build the docker image locally with the image name and then push it to ECR
+Build the docker image locally with the image name and then push it to ECR
 ## with the full name.
 
-## On a SageMaker Notebook Instance, the docker daemon may need to be restarted in order
-## to detect your network configuration correctly.  (This is a known issue.)
+On a SageMaker Notebook Instance, the docker daemon may need to be restarted in order to detect your network configuration correctly.  (This is a known issue.)
 if [ -d "/home/ec2-user/SageMaker" ]; then
   sudo service docker restart
 fi
