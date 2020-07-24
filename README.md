@@ -65,7 +65,7 @@ Log into Sagemaker and place “alsriaz” from the attached file to the email i
 └── output.csv
 
 Input : /opt/ml/input/config contains information to control how your program runs. als_spec.json is a JSON-formatted dictionary of hyperparameter names to values. These values will always be strings, so you may need to convert them.
-•	
+
                 Below are ALS parameter
 {
 	"ranking_type":"count"
@@ -157,7 +157,7 @@ Get the login command from ECR and execute it directly
 $(aws ecr get-login --region ${region} --no-include-email)
 
 Build the docker image locally with the image name and then push it to ECR
-## with the full name.
+with the full name.
 
 On a SageMaker Notebook Instance, the docker daemon may need to be restarted in order to detect your network configuration correctly.  (This is a known issue.)
 if [ -d "/home/ec2-user/SageMaker" ]; then
