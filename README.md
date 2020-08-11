@@ -2,9 +2,10 @@
 ALS based recommendation Engine Build on Apache spark &amp; served on AWS Sagemaker
 Collaborative Filter Recommendation Engine built on Apache Spark:
 1) Tools & libraries used:
+
              Python 3.6
-             Python Flask for serverless architecture & scaling on AWS
-             HADOOP_VERSION 2.7
+             Python Flask
+             HADOOP_VERSION 2.7\n
              Apache Spark 2.3.0
              Python Boto3
              Scikit-learn
@@ -39,21 +40,22 @@ But, we cannot use this output as-is, because:
 2) Popular products invariably will have highest score across a large population of customers.
 
 To overcome this few custom transformations were implemented:
-       a) Include & exclude options provided to the end user:
+a) Include & exclude options provided to the end user:
 Let's say, 
-> we must exclude the recommendations of popular products.
-> We must include few new products in the recommendations, though their actual score is low in the final matrix.
-> New customers could be included to force recommendations. 
+we must exclude the recommendations of popular products.
+We must include few new products in the recommendations, though their actual score is low in the final matrix.
+New customers could be included to force recommendations. 
 
 3) Architecture discussion:
 ALS application which is built using Apache Spark is containerized using Docker (Docker image) & AWS Sagemaker is used for training & Serving the algorithm.
-
 S3 is the storage which holds data.
 Hyper parameter values are in als_spec.json
 Jupyter notebook is part of AWS Sagemker where the code is written.
 Directory structure:
 Log into Sagemaker and place “alsriaz” from the attached file to the email in opt/ml in Sagemaker.  
+
 /opt/ml
+
 ├── input
 │   ├── config
 │   │   ├── als_spec.json
@@ -66,6 +68,7 @@ Log into Sagemaker and place “alsriaz” from the attached file to the email i
 
 Input : /opt/ml/input/config contains information to control how your program runs. als_spec.json is a JSON-formatted dictionary of hyperparameter names to values. These values will always be strings, so you may need to convert them.
 
+
                 Below are ALS parameter
 {
 	"ranking_type":"count"
@@ -77,18 +80,26 @@ Input : /opt/ml/input/config contains information to control how your program ru
 	,"reco_item" : 3
 	,"group_size":4099
 }
-> /opt/ml/input/data/Online Retail.csv/ (for File mode) contains the input data for that channel. The channels are created based on the call to CreateTrainingJob (is part of Sagemaker training) but it's generally important that channels match what the algorithm expects. The files for each channel will be copied from S3 to this directory, preserving the tree structure indicated by the S3 key structure. 
-The output
-> /opt/ml/model/ is the directory where you write the model that your algorithm generates. It can be a single file or a whole directory tree. SageMaker will package any files in this directory into a compressed tar archive file. This file will be available at the S3 location returned in the DescribeTrainingJob result.
-> /opt/ml/output is a directory where the algorithm can write a file failure that describes why the job failed. The contents of this file will be returned in the FailureReason field of the DescribeTrainingJob result. 
 
-Running your container during hosting
+
+/opt/ml/input/data/Online Retail.csv/ (for File mode) contains the input data for that channel. The channels are created based on the call to CreateTrainingJob (is part of Sagemaker training) but it's generally important that channels match what the algorithm expects. The files for each channel will be copied from S3 to this directory, preserving the tree structure indicated by the S3 key structure. 
+
+The output
+/opt/ml/model/ is the directory where I write the model that ALS algorithm generates. It can be a single file or a whole directory tree. SageMaker will package any files in this directory into a compressed tar archive file. This file will be available at the S3 location returned in the DescribeTrainingJob result.
+
+/opt/ml/output is a directory where the algorithm can write a file failure that describes why the job failed. The contents of this file will be returned in the FailureReason field of the DescribeTrainingJob result. 
+
+Running container during hosting
 Hosting has a very different model that training because hosting is responding to inference requests that come in via HTTP. In this example, we use our recommended Python serving stack to provide robust and scalable serving of inference requests:
 This stack is implemented in the sample code here and you can mostly just leave it alone. 
 Amazon SageMaker uses two URLs in the container:
-> /ping will receive GET requests from the infrastructure. Your program returns 200 if the container is up and accepting requests.
-> /invocations is the endpoint that receives client inference POST requests. The format of the request and the response is up to the algorithm. If the client supplied ContentType and Accept headers, these will be passed in as well. 
-> The container will have the model files in the same place they were written during training:
+
+/ping will receive GET requests from the infrastructure. Your program returns 200 if the container is up and accepting requests.
+
+/invocations is the endpoint that receives client inference POST requests. The format of the request and the response is up to the algorithm. If the client supplied ContentType and Accept headers, these will be passed in as well. 
+
+The container will have the model files in the same place they were written during training:
+
 /opt/ml
 └── model
    └── <model files>
