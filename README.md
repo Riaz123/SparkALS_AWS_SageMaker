@@ -56,6 +56,9 @@ Log into Sagemaker and place “alsriaz” from the attached file to the email i
 
 /opt/ml
 
+
+
+
 ├── input
 │   ├── config
 │   │   ├── als_spec.json
@@ -66,6 +69,7 @@ Log into Sagemaker and place “alsriaz” from the attached file to the email i
 └── output
 └── output.csv
 
+	
 Input : /opt/ml/input/config contains information to control how your program runs. als_spec.json is a JSON-formatted dictionary of hyperparameter names to values. These values will always be strings, so you may need to convert them.
 
 
