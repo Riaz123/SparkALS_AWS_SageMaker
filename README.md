@@ -20,7 +20,7 @@ Building recommendation engine with retail explicit feedback data (consisting on
 The solution is to predict which customer would buy what products.
 
 Explicit feedback data (Sales history data) is all that was available to build a recommendation engine. Due to the lack of contextual information or user demographics, I used Collaborative filtering approach to build recommendation engine. 
-We used 'Alternating Least Square (ALS)' a variant of 'Non-Negative Matrix Factorization'.
+I used 'Alternating Least Square (ALS)' a variant of 'Non-Negative Matrix Factorization'.
 
 Model builds two matrices from the Sales data called 'user latent factors' and 'item latent factors’. Due to large number of customers & products in the sales history and the data being explicit & non-negative in nature, leads to a very large sparse matrix.
 Values in the 'User Latent Matrix’ represent latent users’ preferences & those in 'Product Latent matrix' represent latent product quality/attributes. This method of creating or breaking the sales data into 2 matrices is called matrix decomposition and since the values are Non-negative, the approach is called 'Non-Negative Matrix Factorization'.
