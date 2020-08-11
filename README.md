@@ -19,7 +19,7 @@ Collaborative Filter Recommendation Engine built on Apache Spark:
 Building recommendation engine with retail explicit feedback data (consisting only of customer ID, prod ID, qty purchased and date of purchase).
 The solution is to predict which customer would buy what products.
 
-Explicit feedback data (Sales history data) is all that was available to build a recommendation engine. Due to the lack of contextual information or user demographics, we used Collaborative filtering approach to build recommendation engine. 
+Explicit feedback data (Sales history data) is all that was available to build a recommendation engine. Due to the lack of contextual information or user demographics, I used Collaborative filtering approach to build recommendation engine. 
 We used 'Alternating Least Square (ALS)' a variant of 'Non-Negative Matrix Factorization'.
 
 Model builds two matrices from the Sales data called 'user latent factors' and 'item latent factors’. Due to large number of customers & products in the sales history and the data being explicit & non-negative in nature, leads to a very large sparse matrix.
